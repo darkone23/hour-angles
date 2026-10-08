@@ -155,6 +155,17 @@ body {
   margin: 0.4rem 0 0;
 }
 
+.legend {
+  font-style: italic;
+  font-size: 0.88rem;
+  color: #6b4a1e;
+  max-width: 30rem;
+  margin: 0.5rem auto 0;
+}
+
+.legend-gold { color: #a07310; font-style: normal; font-family: 'Cinzel', serif; font-size: 0.8rem; }
+.legend-blue { color: #5d7db0; font-style: normal; font-family: 'Cinzel', serif; font-size: 0.8rem; }
+
 .reading { margin-top: 1.6rem; }
 
 .now-hour {

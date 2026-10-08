@@ -5,6 +5,7 @@
   var HA = window.HourAngles;
   var CX = 240, CY = 240, R_TICK_IN = 180, R_TICK_OUT = 168, R_MAJOR_OUT = 158;
   var R_NUMERAL = 140, R_LABEL = 198, R_ARC = 200, R_STOPWATCH_IN = 156, R_STOPWATCH_OUT = 170;
+  var R_LITURGICAL = 116;
 
   var els = {
     lat: document.getElementById('lat'),
@@ -17,6 +18,7 @@
     arcDay: document.getElementById('arc-day'),
     arcNight: document.getElementById('arc-night'),
     quadrantName: document.getElementById('quadrant-name'),
+    legend: document.getElementById('legend'),
     nowName: document.getElementById('now-hour-name'),
     nowNote: document.getElementById('now-hour-note'),
     nowRemaining: document.getElementById('now-remaining'),
@@ -78,7 +80,8 @@
     if (mode === 'clock24') {
       var loc = getLocation();
       var day = HA.computeDay(new Date(), loc.lat, loc.lon);
-      var swTicks = (day && !isNaN(day.solarNoon.getTime())) ? HA.stopwatchTicks(day, mode) : [];
+      var bounds = (day && !isNaN(day.solarNoon.getTime())) ? HA.arcBounds(day, mode) : null;
+      var swTicks = bounds ? HA.stopwatchTicks(day, mode) : [];
 
       // chronological basis: a thin clock tick each quarter-hour, numerals I–XII
       for (var a = 0; a < 360; a += 15) {
@@ -109,6 +112,25 @@
           stroke: '#b8860b', 'stroke-width': 2, 'stroke-dasharray': '2 4'
         }));
       });
+
+      // the comparison itself: the liturgical hours I–XII numbered along the
+      // stretched day arc and night arc (gold), against the fixed clock
+      // numerals (ink) — one scale stretches, the other does not
+      if (bounds) {
+        for (var q = 0; q < 2; q++) {
+          var arc = q === 0 ? bounds.day : bounds.night;
+          for (var k = 1; k < 12; k++) {
+            var ang = arc.from + (k / 12) * arc.span;
+            var gp = polar(R_LITURGICAL, ang);
+            var lit = svgEl('text', {
+              x: gp[0], y: gp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+              'font-family': 'Cinzel, serif', 'font-size': 12, fill: q === 0 ? '#a07310' : '#5d7db0'
+            });
+            lit.textContent = ROMAN[k % 12];
+            fragL.appendChild(lit);
+          }
+        }
+      }
     } else {
       // temporal dial: six unequal hours per quadrant
       for (var a2 = 0; a2 < 360; a2 += 15) {
@@ -150,6 +172,7 @@
 
     els.ticks.appendChild(fragT);
     els.labels.appendChild(fragL);
+    els.legend.hidden = mode !== 'clock24';
     drawArcs();
   }
 
