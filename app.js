@@ -24,10 +24,18 @@
     nowRemaining: document.getElementById('now-remaining'),
     tableBody: document.getElementById('hours-table-body'),
     modeTemporal: document.getElementById('mode-temporal'),
-    modeClock24: document.getElementById('mode-clock24')
+    modeClock24: document.getElementById('mode-clock24'),
+    day: document.getElementById('day'),
+    today: document.getElementById('today'),
+    play: document.getElementById('play'),
+    yearSlider: document.getElementById('year-slider'),
+    yearLabel: document.getElementById('year-label')
   };
 
   var mode = 'temporal';
+  var viewDate = new Date();   // the day the dial is drawn for (today by default)
+  var playing = false;
+  var playTimer = null;
 
   /* Dial angle (0 = top, clockwise) -> pointer rotation. */
   function dialToRotation(dialAngle) {
@@ -92,7 +100,7 @@
 
     var canonicalAngles = {};
     if (mode === 'clock24') {
-      var day = HA.computeDay(new Date(), parseFloat(els.lat.value), parseFloat(els.lon.value));
+      var day = HA.computeDay(viewNow(), parseFloat(els.lat.value), parseFloat(els.lon.value));
       if (day && !isNaN(day.solarNoon.getTime())) {
         HA.canonicalHours(day).forEach(function (h) {
           if (h.clockAngle != null) canonicalAngles[Math.round(h.clockAngle)] = h.name;
@@ -121,7 +129,7 @@
     }
 
     var loc = getLocation();
-    var day = HA.computeDay(new Date(), loc.lat, loc.lon);
+    var day = HA.computeDay(viewNow(), loc.lat, loc.lon);
     var valid = day && !isNaN(day.solarNoon.getTime()) && !isNaN(day.sunrise.getTime());
     var bounds = valid ? HA.arcBounds(day, mode) : null;
 
@@ -188,8 +196,48 @@
     drawArcs();
   }
 
+  /* The effective "now": the chosen day, at the current wall-clock time. */
+  function viewNow() {
+    var now = new Date();
+    var sameDay = viewDate.getFullYear() === now.getFullYear() &&
+      viewDate.getMonth() === now.getMonth() &&
+      viewDate.getDate() === now.getDate();
+    if (sameDay) return now;
+    var t = new Date(viewDate.getTime());
+    t.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+    return t;
+  }
+
+  function dayOfYearIndex(d) {
+    var start = new Date(d.getFullYear(), 0, 1);
+    return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 86400000);
+  }
+
+  function dateFromDayIndex(year, idx) {
+    return new Date(year, 0, 1 + idx);
+  }
+
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function syncViewUI() {
+    var idx = dayOfYearIndex(viewDate);
+    els.yearSlider.value = String(idx);
+    els.day.value = viewDate.getFullYear() + '-' +
+      String(viewDate.getMonth() + 1).padStart(2, '0') + '-' +
+      String(viewDate.getDate()).padStart(2, '0');
+    els.yearLabel.textContent = MONTHS[viewDate.getMonth()] + ' ' + viewDate.getDate() +
+      (idx === dayOfYearIndex(new Date()) ? '' : ' · ' + Math.round(HA.dayFraction(HA.computeDay(viewDate, parseFloat(els.lat.value), parseFloat(els.lon.value))) * 24) + ' h daylight');
+  }
+
+  function refresh(animate) {
+    if (animate === undefined) animate = true;
+    buildStatic();
+    render();
+    syncViewUI();
+  }
+
   function drawArcs() {
-    var day = HA.computeDay(new Date(), parseFloat(els.lat.value), parseFloat(els.lon.value));
+    var day = HA.computeDay(viewNow(), parseFloat(els.lat.value), parseFloat(els.lon.value));
     var bounds = (day && !isNaN(day.sunrise.getTime()) && !isNaN(day.sunset.getTime()))
       ? HA.arcBounds(day, mode) : { day: { from: 270, to: 90 }, night: { from: 90, to: 270 } };
     els.arcDay.setAttribute('d', arcPath(R_ARC, bounds.day.from, bounds.day.to));
@@ -218,13 +266,13 @@
     if (isNaN(loc.lat) || isNaN(loc.lon)) return;
     clearError();
 
-    var day = HA.computeDay(new Date(), loc.lat, loc.lon);
+    var day = HA.computeDay(viewNow(), loc.lat, loc.lon);
     if (isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime()) || isNaN(day.solarNoon.getTime())) {
       showError('The sun keeps no hours here — perhaps this latitude lies beyond his realm.');
       return;
     }
 
-    var state = HA.hourState(new Date(), day, mode);
+    var state = HA.hourState(viewNow().getTime(), day, mode);
     if (!state) {
       showError('The hour cannot be read — the sun is on the other side of the world.');
       return;
@@ -299,6 +347,40 @@
     els.modeTemporal.addEventListener('click', function () { setMode('temporal'); });
     els.modeClock24.addEventListener('click', function () { setMode('clock24'); });
 
+    els.day.addEventListener('change', function () {
+      if (!els.day.value) return;
+      viewDate = new Date(els.day.value + 'T12:00:00');
+      if (!isNaN(viewDate.getTime())) refresh();
+    });
+
+    els.today.addEventListener('click', function () {
+      viewDate = new Date();
+      refresh();
+    });
+
+    els.yearSlider.addEventListener('input', function () {
+      viewDate = dateFromDayIndex(viewDate.getFullYear(), parseInt(els.yearSlider.value, 10));
+      refresh();
+    });
+
+    els.play.addEventListener('click', function () {
+      if (playing) { stopPlaying(); return; }
+      playing = true;
+      els.play.textContent = '❚❚ Pause the year';
+      playTimer = setInterval(function () {
+        var idx = dayOfYearIndex(viewDate) + 1;
+        if (idx > 364) { stopPlaying(); return; }
+        viewDate = dateFromDayIndex(viewDate.getFullYear(), idx);
+        refresh();
+      }, 90);
+    });
+
+    function stopPlaying() {
+      playing = false;
+      clearInterval(playTimer);
+      els.play.textContent = '▶ Scrub the year';
+    }
+
     els.geo.addEventListener('click', function () {
       if (!navigator.geolocation) {
         showError('This device knows not where it stands — enter the latitude and longitude by hand.');
@@ -317,6 +399,7 @@
     });
 
     render();
+    syncViewUI();
     setInterval(render, 30000);
   }
 

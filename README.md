@@ -10,8 +10,9 @@ vanilla-JS clock (SunCalc and fonts come from CDN):
 
 - enter latitude/longitude (saved in localStorage), or click **Use my place**
   for device geolocation
-- a dial divided into four quarters — sunrise, solar noon, sunset, nadir —
-  each quarter standing for six "temporal" hours of light or dark
+- a **day picker and year scrubber** — choose any day, or press play and
+  watch the sunlit half of the dial breathe through the whole year,
+  lengthening and shortening with the seasons
 - the gilded sun pointer marks the present hour angle (0° = sunrise,
   90° = noon, 180° = sunset, 270° = nadir)
 - canonical hours are marked on the dial: **Lauds** (dawn), **Prime**,

@@ -34,6 +34,17 @@
       <button id="mode-temporal" type="button" class="button mode active">Liturgical basis</button>
       <button id="mode-clock24" type="button" class="button mode">Stopwatch basis</button>
     </div>
+    <label class="rubric">
+      <span>The day</span>
+      <input id="day" type="date">
+    </label>
+    <button id="today" type="button" class="button mode">Today</button>
+    <div class="year-scrub">
+      <button id="play" type="button" class="button" aria-label="Scrub the year">▶ Scrub the year</button>
+      <input id="year-slider" type="range" min="0" max="364" step="1" value="0"
+             aria-label="Scrub through the days of the year">
+      <span id="year-label" class="year-label"></span>
+    </div>
     <p id="error" class="error" hidden></p>
   </section>
 

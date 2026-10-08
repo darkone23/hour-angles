@@ -167,6 +167,25 @@ body {
 .legend-blue { color: #5d7db0; font-style: normal; font-family: 'Cinzel', serif; font-size: 0.8rem; }
 .legend-ink { color: #5b3a1e; font-style: normal; font-family: 'Cinzel', serif; font-size: 0.8rem; }
 
+.year-scrub {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.year-scrub input[type="range"] { flex: 1; accent-color: var(--gold); }
+
+.year-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  color: #6b4a1e;
+  min-width: 7.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .reading { margin-top: 1.6rem; }
 
 .now-hour {
