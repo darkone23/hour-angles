@@ -1,0 +1,206 @@
+:root {
+  --ink: #2b1d0e;
+  --rubric: #9e2b25;
+  --gold: #b8860b;
+  --gold-bright: #d4af37;
+  --parchment: #f3e6c4;
+  --night: #223a5e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 2rem 1rem 3rem;
+  font-family: 'IM Fell English', Georgia, serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255, 250, 230, 0.9), transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(120, 85, 30, 0.25), transparent 60%),
+    linear-gradient(160deg, #e9d9ae 0%, #efe2bd 30%, #e4d2a0 65%, #d9c48c 100%);
+  min-height: 100vh;
+}
+
+.manuscript {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2.2rem 2.4rem;
+  background:
+    repeating-linear-gradient(115deg, rgba(140, 100, 40, 0.05) 0 2px, transparent 2px 9px),
+    radial-gradient(ellipse at 30% 20%, #f8efd6, transparent 70%),
+    linear-gradient(#f4e8ca, #ecdbb2);
+  border: 1px solid #b08d4f;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 6px #efe3c3,
+    0 0 0 8px var(--gold),
+    0 18px 40px rgba(43, 29, 14, 0.35);
+}
+
+.page-head { text-align: center; margin-bottom: 1.6rem; }
+
+.page-head h1 {
+  font-family: 'UnifrakturMaguntia', 'Cinzel', serif;
+  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  margin: 0;
+  color: var(--rubric);
+  text-shadow: 1px 1px 0 var(--gold-bright);
+  letter-spacing: 0.04em;
+}
+
+.rubble {
+  font-size: 1.4rem;
+  color: var(--gold);
+  display: inline-block;
+  margin: 0 1rem;
+  vertical-align: middle;
+}
+
+.incipit {
+  font-style: italic;
+  font-size: 1.05rem;
+  margin: 0.5rem auto 0;
+  max-width: 34rem;
+}
+
+.incipit em { color: var(--rubric); }
+
+/* drop cap for the incipit */
+.incipit::first-letter {
+  font-family: 'UnifrakturMaguntia', serif;
+  font-size: 2.4em;
+  color: var(--rubric);
+  float: left;
+  line-height: 0.9;
+  padding: 0 0.35rem 0 0;
+  text-shadow: 1px 1px 0 var(--gold-bright);
+}
+
+.rubrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  background: rgba(255, 252, 240, 0.45);
+  margin-bottom: 1.4rem;
+}
+
+.rubric { display: flex; flex-direction: column; font-size: 0.95rem; }
+.rubric span { font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.12em; color: #6b4a1e; }
+
+.rubric input {
+  font-family: 'IM Fell English', serif;
+  font-size: 1rem;
+  padding: 0.35rem 0.5rem;
+  width: 8.5rem;
+  color: var(--ink);
+  background: #fdf8ea;
+  border: 1px solid #a4834a;
+  border-radius: 2px;
+}
+
+.button {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 1.1rem;
+  color: var(--parchment);
+  background: linear-gradient(#7a1f1a, #9e2b25);
+  border: 1px solid #5e1512;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.button:hover { background: linear-gradient(#8a241e, #ae3a30); }
+
+.error {
+  width: 100%;
+  margin: 0;
+  color: var(--rubric);
+  font-style: italic;
+}
+
+.dial-wrap { text-align: center; }
+
+#dial {
+  width: min(100%, 460px);
+  height: auto;
+  filter: drop-shadow(0 8px 14px rgba(43, 29, 14, 0.3));
+}
+
+.quadrant-name {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: #6b4a1e;
+  margin: 0.4rem 0 0;
+}
+
+.reading { margin-top: 1.6rem; }
+
+.now-hour {
+  text-align: center;
+  padding: 1rem;
+  border-top: 1px solid var(--gold);
+  border-bottom: 1px solid var(--gold);
+  margin-bottom: 1.2rem;
+}
+
+.now-cap { font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.12em; color: #6b4a1e; }
+
+.now-name {
+  display: block;
+  font-family: 'UnifrakturMaguntia', serif;
+  font-size: 2.3rem;
+  color: var(--rubric);
+  text-shadow: 1px 1px 0 var(--gold-bright);
+}
+
+.now-note { font-style: italic; color: #6b4a1e; }
+
+.now-remaining { margin: 0.3rem 0 0; font-style: italic; }
+
+.hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.98rem;
+}
+
+.hours-table th {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b4a1e;
+  border-bottom: 2px solid var(--gold);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.hours-table td {
+  padding: 0.42rem 0.6rem;
+  border-bottom: 1px solid rgba(184, 134, 11, 0.35);
+}
+
+.hours-table td.hour-name { font-family: 'Cinzel', serif; color: var(--rubric); }
+.hours-table tr.current-row { background: rgba(212, 175, 55, 0.22); font-weight: bold; }
+.hours-table td.hour-note { font-style: italic; color: #6b4a1e; }
+
+.colophon {
+  margin-top: 2rem;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #6b4a1e;
+}
+
+.colophon a { color: var(--rubric); }
+
+@media (max-width: 560px) {
+  .manuscript { padding: 1.4rem 1.1rem; }
+}

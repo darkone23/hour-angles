@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horæ — A Clock of the Canonical Hours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="manuscript">
+
+  <header class="page-head">
+    <div class="rubble left" aria-hidden="true">❧</div>
+    <h1>Horæ</h1>
+    <div class="rubble right" aria-hidden="true">❧</div>
+    <p class="incipit">A clock of the <em>canonical hours</em>, kept after the ancient manner —
+      the day divided by sun and stars, not by mechanical wheels.</p>
+  </header>
+
+  <section class="rubrics">
+    <label class="rubric">
+      <span>Latitude</span>
+      <input id="lat" type="number" step="0.001" min="-89.999" max="89.999" placeholder="32.716">
+    </label>
+    <label class="rubric">
+      <span>Longitude</span>
+      <input id="lon" type="number" step="0.001" min="-180" max="180" placeholder="-117.161">
+    </label>
+    <button id="geo" type="button" class="button">☉ Use my place</button>
+    <p id="error" class="error" hidden></p>
+  </section>
+
+  <section class="dial-wrap">
+    <svg id="dial" viewBox="0 0 480 480" role="img" aria-label="Dial of the canonical hours">
+      <defs>
+        <radialGradient id="parchment" cx="50%" cy="42%" r="70%">
+          <stop offset="0%" stop-color="#f6ecd2"/>
+          <stop offset="70%" stop-color="#eddfb8"/>
+          <stop offset="100%" stop-color="#dcc48f"/>
+        </radialGradient>
+        <radialGradient id="nightwash" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stop-color="#223a5e" stop-opacity="0.0"/>
+          <stop offset="85%" stop-color="#223a5e" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#16233c" stop-opacity="0.5"/>
+        </radialGradient>
+        <radialGradient id="sunface" cx="38%" cy="35%" r="75%">
+          <stop offset="0%" stop-color="#ffe9a8"/>
+          <stop offset="60%" stop-color="#e0a93e"/>
+          <stop offset="100%" stop-color="#8a5d12"/>
+        </radialGradient>
+      </defs>
+
+      <circle cx="240" cy="240" r="228" fill="url(#parchment)" stroke="#5b3a1e" stroke-width="3"/>
+      <circle cx="240" cy="240" r="216" fill="none" stroke="#b8860b" stroke-width="1.4"/>
+      <circle cx="240" cy="240" r="180" fill="none" stroke="#5b3a1e" stroke-width="1.2"/>
+
+      <!-- day / night quadrant washes -->
+      <path id="arc-day" d="" fill="none" stroke="#e8c96f" stroke-width="30" stroke-opacity="0.45"/>
+      <path id="arc-night" d="" fill="none" stroke="#223a5e" stroke-width="30" stroke-opacity="0.35"/>
+
+      <g id="ticks"></g>
+      <g id="labels"></g>
+
+      <!-- the sun pointer -->
+      <g id="pointer" transform="rotate(0 240 240)">
+        <line x1="240" y1="240" x2="240" y2="76" stroke="#8a5d12" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <g transform="translate(240 76)">
+          <circle r="20" fill="url(#sunface)" stroke="#7a4b0d" stroke-width="2"/>
+          <g stroke="#7a4b0d" stroke-width="2" stroke-linecap="round">
+            <line x1="0" y1="-27" x2="0" y2="-33"/><line x1="0" y1="27" x2="0" y2="33"/>
+            <line x1="-27" y1="0" x2="-33" y2="0"/><line x1="27" y1="0" x2="33" y2="0"/>
+            <line x1="-19" y1="-19" x2="-24" y2="-24"/><line x1="19" y1="19" x2="24" y2="24"/>
+            <line x1="-19" y1="19" x2="-24" y2="24"/><line x1="19" y1="-19" x2="24" y2="-24"/>
+          </g>
+          <circle r="6" fill="#f6ecd2" stroke="#7a4b0d" stroke-width="1.5"/>
+        </g>
+      </g>
+
+      <circle cx="240" cy="240" r="14" fill="#5b3a1e"/>
+      <circle cx="240" cy="240" r="6" fill="#e0a93e"/>
+    </svg>
+    <p id="quadrant-name" class="quadrant-name"></p>
+  </section>
+
+  <section class="reading">
+    <div class="now-hour">
+      <span class="now-cap">The present hour:</span>
+      <span id="now-hour-name" class="now-name">—</span>
+      <span id="now-hour-note" class="now-note"></span>
+      <p id="now-remaining" class="now-remaining"></p>
+    </div>
+    <table class="hours-table">
+      <thead>
+        <tr><th>Hour</th><th>Kept at</th><th>By the clock</th></tr>
+      </thead>
+      <tbody id="hours-table-body"></tbody>
+    </table>
+  </section>
+
+  <footer class="colophon">
+    <p>Written after the manner of the old breviaries · the light hours and the dark
+      are each divided into six, and the sun himself points the hour. ·
+      <a href="https://github.com/darkone23/hour-angles">the script of this book</a></p>
+  </footer>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js"></script>
+<script src="hours.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

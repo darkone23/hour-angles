@@ -1,4 +1,10 @@
 {
+  "name": "hour-angles",
+  "version": "1.0.0",
+  "description": "earth+sun clock — canonical hours as a web dial",
+  "scripts": {
+    "test": "node test/hours.test.js"
+  },
   "dependencies": {
     "dayjs": "^1.11.10",
     "suncalc": "^1.9.0"
