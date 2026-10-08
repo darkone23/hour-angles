@@ -32,6 +32,9 @@
     play: document.getElementById('play'),
     yearSlider: document.getElementById('year-slider'),
     yearLabel: document.getElementById('year-label'),
+    live: document.getElementById('live'),
+    timeSlider: document.getElementById('time-slider'),
+    timeLabel: document.getElementById('time-label'),
     yearRing: document.getElementById('year-ring'),
     yearMarker: document.getElementById('year-marker'),
     festival: document.getElementById('festival')
@@ -39,6 +42,7 @@
 
   var mode = 'temporal';
   var viewDate = new Date();   // the day the dial is drawn for (today by default)
+  var timeScrubMin = null;     // wall-clock minutes when the hour is scrubbed
   var playing = false;
   var playTimer = null;
 
@@ -296,16 +300,21 @@
     });
   }
 
-  /* The effective "now": the chosen day, at the current wall-clock time. */
+  /* The effective "now": the chosen day and (scrubbed or current) hour. */
   function viewNow() {
     var now = new Date();
     var sameDay = viewDate.getFullYear() === now.getFullYear() &&
       viewDate.getMonth() === now.getMonth() &&
       viewDate.getDate() === now.getDate();
+    if (timeScrubMin != null) {
+      var t = new Date(viewDate.getTime());
+      t.setHours(Math.floor(timeScrubMin / 60), timeScrubMin % 60, 0, 0);
+      return t;
+    }
     if (sameDay) return now;
-    var t = new Date(viewDate.getTime());
-    t.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
-    return t;
+    var v = new Date(viewDate.getTime());
+    v.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+    return v;
   }
 
   function dayOfYearIndex(d) {
@@ -327,6 +336,11 @@
       String(viewDate.getDate()).padStart(2, '0');
     els.yearLabel.textContent = MONTHS[viewDate.getMonth()] + ' ' + viewDate.getDate() +
       (idx === dayOfYearIndex(new Date()) ? '' : ' · ' + Math.round(HA.dayFraction(HA.computeDay(viewDate, parseFloat(els.lat.value), parseFloat(els.lon.value))) * 24) + ' h daylight');
+    var vn = viewNow();
+    var mins = vn.getHours() * 60 + vn.getMinutes();
+    els.timeSlider.value = String(mins);
+    els.timeLabel.textContent = String(vn.getHours()).padStart(2, '0') + ':' +
+      String(vn.getMinutes()).padStart(2, '0') + (timeScrubMin != null ? ' (scrubbed)' : '');
   }
 
   function refresh(animate) {
@@ -465,6 +479,18 @@
       refresh();
     });
 
+    els.timeSlider.addEventListener('input', function () {
+      timeScrubMin = parseInt(els.timeSlider.value, 10);
+      refresh();
+    });
+
+    els.live.addEventListener('click', function () {
+      stopPlaying();
+      timeScrubMin = null;
+      viewDate = new Date();
+      refresh();
+    });
+
     els.play.addEventListener('click', function () {
       if (playing) { stopPlaying(); return; }
       playing = true;
@@ -473,6 +499,9 @@
         var idx = dayOfYearIndex(viewDate) + 1;
         if (idx > 364) { stopPlaying(); return; }
         viewDate = dateFromDayIndex(viewDate.getFullYear(), idx);
+        // the hours scrub by degrees too: the hand sweeps while the year turns
+        timeScrubMin = (timeScrubMin == null ? new Date().getHours() * 60 + new Date().getMinutes() : timeScrubMin) + 47;
+        timeScrubMin = timeScrubMin % 1440;
         refresh();
       }, 90);
     });

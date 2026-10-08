@@ -146,6 +146,9 @@ body {
   filter: drop-shadow(0 8px 14px rgba(43, 29, 14, 0.3));
 }
 
+/* the sun glides rather than snaps when the hour or the year is scrubbed */
+#pointer { transition: transform 0.25s ease-in-out; }
+
 .quadrant-name {
   font-family: 'Cinzel', serif;
   letter-spacing: 0.35em;
