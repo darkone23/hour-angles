@@ -124,6 +124,20 @@ body {
   font-style: italic;
 }
 
+.mode-toggle { display: flex; gap: 0.5rem; }
+
+.button.mode {
+  background: linear-gradient(#e8dcc0, #dcc99a);
+  color: #5b3a1e;
+  border: 1px solid #a4834a;
+}
+
+.button.mode.active {
+  background: linear-gradient(#7a1f1a, #9e2b25);
+  color: var(--parchment);
+  border-color: #5e1512;
+}
+
 .dial-wrap { text-align: center; }
 
 #dial {
@@ -200,6 +214,15 @@ body {
 }
 
 .colophon a { color: var(--rubric); }
+
+/* upright canonical labels with a parchment halo so they stay readable
+   over the day/night arcs */
+#labels text.hour-label {
+  paint-order: stroke;
+  stroke: rgba(243, 230, 196, 0.92);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
 
 @media (max-width: 560px) {
   .manuscript { padding: 1.4rem 1.1rem; }

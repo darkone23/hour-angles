@@ -71,6 +71,51 @@
     return null;
   }
 
+  /* ---- 24-hour clock mode -------------------------------------------------
+   * Solar noon is pinned to the top of the dial (0°, clockwise). The daylight
+   * arc stretches/shrinks symmetrically around it with the true day length:
+   * a 12-hour day fills exactly the top half (as in temporal mode), a longer
+   * day stretches past 9 and 3 o'clock, a shorter day shrinks inside them.
+   * dial angle convention everywhere: 0° = top (solar noon), clockwise.
+   */
+  function mod360(d) { return ((d % 360) + 360) % 360; }
+
+  function dayFraction(day) {
+    return (day.sunset.getTime() - day.sunrise.getTime()) / 86400000;
+  }
+
+  function clockAngleFor(now, day) {
+    if (isNaN(day.solarNoon.getTime())) return null;
+    var off = (now - day.solarNoon.getTime()) % 86400000;
+    if (off < 0) off += 86400000;
+    return off / 86400000 * 360;
+  }
+
+  /* Dial angle (0 = top, clockwise) for the given mode. */
+  function dialAngleFor(now, day, mode) {
+    if (mode === 'clock24') return clockAngleFor(now, day);
+    var a = angleFor(now, day);
+    if (a == null) return null;
+    return mod360(a - 90);
+  }
+
+  /* Day/night arc bounds in dial angles, drawn clockwise from `from`. */
+  function arcBounds(day, mode) {
+    if (mode === 'clock24') {
+      if (isNaN(day.solarNoon.getTime())) return null;
+      var sunriseDial = clockAngleFor(day.sunrise.getTime(), day);
+      var sunsetDial = clockAngleFor(day.sunset.getTime(), day);
+      return {
+        day: { from: sunriseDial, to: sunsetDial, span: mod360(sunsetDial - sunriseDial) },
+        night: { from: sunsetDial, to: sunriseDial, span: mod360(sunriseDial - sunsetDial) }
+      };
+    }
+    return {
+      day: { from: 270, to: 90, span: 180 },
+      night: { from: 90, to: 270, span: 180 }
+    };
+  }
+
   /*
    * Canonical hours on the temporal clock. Daylight is divided into
    * twelve unequal hours (six per quadrant above), the night likewise.
@@ -85,7 +130,10 @@
       { name: 'Vespers', angle: 180, at: day.sunset, note: 'at dusk' },
       { name: 'Compline', angle: 225, at: timeAtAngle(day, 225) },
       { name: 'Matins', angle: 315, at: timeAtAngle(day, 315), note: 'the night office' }
-    ];
+    ].map(function (h) {
+      h.clockAngle = clockAngleFor(h.at.getTime(), day);
+      return h;
+    });
   }
 
   function timeAtAngle(day, angle) {
@@ -100,7 +148,8 @@
   }
 
   /* Nearest canonical hour at or before `now`, plus the next one. */
-  function hourState(now, day) {
+  function hourState(now, day, mode) {
+    if (mode === 'clock24') return hourStateClock24(now, day);
     var angle = angleFor(now, day);
     if (angle == null) return null;
     var hours = canonicalHours(day).sort(function (a, b) { return a.angle - b.angle; });
@@ -116,11 +165,54 @@
     if (!next) next = Object.assign({}, hours[0], { angle: 360, at: new Date(day.sunrise.getTime() + 24 * 3600 * 1000) });
     return {
       angle: angle,
+      dialAngle: mod360(angle - 90),
       quadrant: QUADRANTS[quadrantFor(angle)].label,
       current: prev,
       next: next,
       msIntoHour: now - timeAtAngle(day, prev.angle).getTime(),
       msUntilNext: next.at.getTime() - now
+    };
+  }
+
+  /* 24-hour mode: offices ordered by their real offset from solar noon. */
+  function hourStateClock24(now, day) {
+    if (isNaN(day.solarNoon.getTime()) || isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime())) return null;
+    var noon = day.solarNoon.getTime();
+    var nowOff = (now - noon) % 86400000;
+    if (nowOff < 0) nowOff += 86400000;
+
+    var hours = canonicalHours(day).map(function (h) {
+      var off = (h.at.getTime() - noon) % 86400000;
+      if (off < 0) off += 86400000;
+      return { hour: h, off: off };
+    }).sort(function (a, b) { return a.off - b.off; });
+
+    var cur = null, nxt = null;
+    for (var i = 0; i < hours.length; i++) {
+      if (hours[i].off <= nowOff) cur = hours[i];
+      else { nxt = hours[i]; break; }
+    }
+    if (!cur) cur = hours[hours.length - 1];   // wrap: latest office "yesterday"
+    if (!nxt) nxt = hours[0];                  // wrap: earliest office "tomorrow"
+
+    var sunriseOff = (day.sunrise.getTime() - noon) % 86400000;
+    var sunsetOff = (day.sunset.getTime() - noon) % 86400000;
+    if (sunriseOff < 0) sunriseOff += 86400000;
+    if (sunsetOff < 0) sunsetOff += 86400000;
+    // the day band may wrap midnight in offset space (short nights aside,
+    // sunrise and sunset offsets straddle 0 whenever the band crosses 24h)
+    var isDay = sunriseOff <= sunsetOff
+      ? (nowOff >= sunriseOff && nowOff < sunsetOff)
+      : (nowOff >= sunriseOff || nowOff < sunsetOff);
+
+    return {
+      angle: null,
+      dialAngle: nowOff / 86400000 * 360,
+      quadrant: isDay ? 'Day' : 'Night',
+      current: cur.hour,
+      next: nxt.hour,
+      msIntoHour: (nowOff - cur.off + 86400000) % 86400000,
+      msUntilNext: (nxt.off - nowOff + 86400000) % 86400000
     };
   }
 
@@ -144,6 +236,10 @@
     computeDay: computeDay,
     angleFor: angleFor,
     quadrantFor: quadrantFor,
+    clockAngleFor: clockAngleFor,
+    dialAngleFor: dialAngleFor,
+    dayFraction: dayFraction,
+    arcBounds: arcBounds,
     canonicalHours: canonicalHours,
     timeAtAngle: timeAtAngle,
     hourState: hourState,

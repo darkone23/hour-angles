@@ -4,6 +4,7 @@
 
   var HA = window.HourAngles;
   var CX = 240, CY = 240, R_TICK_IN = 180, R_TICK_OUT = 168, R_MAJOR_OUT = 158;
+  var R_NUMERAL = 148, R_LABEL = 198, R_ARC = 195;
 
   var els = {
     lat: document.getElementById('lat'),
@@ -19,24 +20,28 @@
     nowName: document.getElementById('now-hour-name'),
     nowNote: document.getElementById('now-hour-note'),
     nowRemaining: document.getElementById('now-remaining'),
-    tableBody: document.getElementById('hours-table-body')
+    tableBody: document.getElementById('hours-table-body'),
+    modeTemporal: document.getElementById('mode-temporal'),
+    modeClock24: document.getElementById('mode-clock24')
   };
 
-  /* angle (hour angle 0=sunrise) -> SVG rotation for the pointer. */
-  function angleToRotation(angle) {
-    return angle - 90; // sunrise at 9 o'clock, noon at 12, sunset at 3
+  var mode = 'temporal';
+
+  /* Dial angle (0 = top, clockwise) -> pointer rotation. */
+  function dialToRotation(dialAngle) {
+    return dialAngle; // pointer drawn pointing up; 0 = top
   }
 
-  function polar(r, deg) {
-    var rad = (deg - 90) * Math.PI / 180; // 0deg = 12 o'clock, clockwise
-    return [CX + r * Math.cos(rad), CY + r * Math.sin(rad)];
+  function polar(r, dialDeg) {
+    var rad = dialDeg * Math.PI / 180; // 0deg = 12 o'clock, clockwise
+    return [CX + r * Math.sin(rad), CY - r * Math.cos(rad)];
   }
 
   function arcPath(r, fromDeg, toDeg) {
     var a = polar(r, fromDeg), b = polar(r, toDeg);
-    var large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0;
-    var sweep = toDeg > fromDeg ? 1 : 0;
-    return 'M ' + a[0] + ' ' + a[1] + ' A ' + r + ' ' + r + ' 0 ' + large + ' ' + sweep + ' ' + b[0] + ' ' + b[1];
+    var span = ((toDeg - fromDeg) % 360 + 360) % 360;
+    var large = span > 180 ? 1 : 0;
+    return 'M ' + a[0] + ' ' + a[1] + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + b[0] + ' ' + b[1];
   }
 
   function svgEl(tag, attrs) {
@@ -45,53 +50,102 @@
     return el;
   }
 
-  var CANONICAL = { 0: 'Lauds', 15: 'Prime', 45: 'Terce', 90: 'Sext', 135: 'None', 180: 'Vespers', 225: 'Compline', 315: 'Matins' };
+  var CANONICAL = { 'Lauds': 1, 'Prime': 1, 'Terce': 1, 'Sext': 1, 'None': 1, 'Vespers': 1, 'Compline': 1, 'Matins': 1 };
+  var ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  var QUARTER_ROMAN = ['I', 'II', 'III', 'IV', 'V']; // minor ticks within a quadrant
 
+  /* All tick/label geometry depends on the mode, so rebuild on toggle. */
   function buildStatic() {
+    els.ticks.innerHTML = '';
+    els.labels.innerHTML = '';
+
+    var canonicalAngles = {};
+    if (mode === 'clock24') {
+      var day = HA.computeDay(new Date(), parseFloat(els.lat.value), parseFloat(els.lon.value));
+      if (day && !isNaN(day.solarNoon.getTime())) {
+        HA.canonicalHours(day).forEach(function (h) {
+          if (h.clockAngle != null) canonicalAngles[Math.round(h.clockAngle)] = h.name;
+        });
+      }
+    } else {
+      // temporal dial angles = hour angle - 90 (0° = top = solar noon)
+      canonicalAngles = { 0: 'Sext', 45: 'None', 90: 'Vespers', 135: 'Compline', 180: 'Matins', 225: 'Lauds', 255: 'Prime', 315: 'Terce' };
+    }
+
     var fragT = document.createDocumentFragment();
     var fragL = document.createDocumentFragment();
-    for (var a = 0; a < 360; a += 15) {
-      var major = a % 45 === 0;
-      var canonical = CANONICAL[a];
-      var rOut = major ? R_MAJOR_OUT : R_TICK_OUT;
-      var p1 = polar(R_TICK_IN, a - 90), p2 = polar(rOut, a - 90);
-      fragT.appendChild(svgEl('line', {
-        x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
-        stroke: major ? '#5b3a1e' : '#8a6a35',
-        'stroke-width': major ? 2.2 : 1,
-        'stroke-dasharray': major ? '' : '3 3'
-      }));
-      var lp = polar(rOut - 14, a - 90);
-      if (canonical) {
-        var text = svgEl('text', {
-          x: lp[0], y: lp[1],
-          'text-anchor': 'middle',
-          'dominant-baseline': 'middle',
-          'font-family': 'Cinzel, serif',
-          'font-size': a % 90 === 0 ? 17 : 13,
-          'font-weight': a % 90 === 0 ? 'bold' : 'normal',
-          fill: a % 90 === 0 ? '#9e2b25' : '#5b3a1e',
-          transform: 'rotate(' + (a > 180 ? -12 : 12) + ' ' + lp[0] + ' ' + lp[1] + ')'
-        });
-        text.textContent = canonical;
-        fragL.appendChild(text);
-      } else {
-        var numeral = svgEl('text', {
-          x: lp[0], y: lp[1],
-          'text-anchor': 'middle',
-          'dominant-baseline': 'middle',
-          'font-family': 'Cinzel, serif',
-          'font-size': 11,
-          fill: '#8a6a35'
-        });
-        numeral.textContent = ['I', 'II', 'III', 'IV', 'V'][(a / 15) % 6 - 1];
-        fragL.appendChild(numeral);
+
+    if (mode === 'clock24') {
+      // true 24-hour dial: a tick each quarter-hour of the day, numerals I–XII
+      for (var a = 0; a < 360; a += 15) {
+        var major = a % 90 === 0;
+        var p1 = polar(R_TICK_IN, a), p2 = polar(major ? R_MAJOR_OUT : R_TICK_OUT, a);
+        fragT.appendChild(svgEl('line', {
+          x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
+          stroke: major ? '#5b3a1e' : '#8a6a35',
+          'stroke-width': major ? 2.2 : 1,
+          'stroke-dasharray': major ? '' : '3 3'
+        }));
+        if (a % 30 === 0) {
+          var np = polar(R_NUMERAL, a);
+          var numeral = svgEl('text', {
+            x: np[0], y: np[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+            'font-family': 'Cinzel, serif', 'font-size': 13, fill: '#8a6a35'
+          });
+          numeral.textContent = ROMAN[a / 30];
+          fragL.appendChild(numeral);
+        }
+      }
+    } else {
+      // temporal dial: six unequal hours per quadrant
+      for (var a2 = 0; a2 < 360; a2 += 15) {
+        var major2 = a2 % 45 === 0;
+        var q1 = polar(R_TICK_IN, a2), q2 = polar(major2 ? R_MAJOR_OUT : R_TICK_OUT, a2);
+        fragT.appendChild(svgEl('line', {
+          x1: q1[0], y1: q1[1], x2: q2[0], y2: q2[1],
+          stroke: major2 ? '#5b3a1e' : '#8a6a35',
+          'stroke-width': major2 ? 2.2 : 1,
+          'stroke-dasharray': major2 ? '' : '3 3'
+        }));
+        if (a2 % 30 !== 0 && !canonicalAngles[a2]) {
+          var qp = polar(R_NUMERAL, a2);
+          var qn = svgEl('text', {
+            x: qp[0], y: qp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+            'font-family': 'Cinzel, serif', 'font-size': 11, fill: '#8a6a35'
+          });
+          qn.textContent = QUARTER_ROMAN[(a2 / 15) % 6 - 1];
+          fragL.appendChild(qn);
+        }
       }
     }
+
+    // canonical hour names, upright, just inside the outer ring, on both modes
+    Object.keys(canonicalAngles).forEach(function (k) {
+      var ang = parseFloat(k), name = canonicalAngles[k];
+      var lp = polar(R_LABEL, ang);
+      var text = svgEl('text', {
+        x: lp[0], y: lp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Cinzel, serif',
+        'font-size': ang % 90 === 0 ? 17 : 13,
+        'font-weight': ang % 90 === 0 ? 'bold' : 'normal',
+        fill: ang % 90 === 0 ? '#9e2b25' : '#5b3a1e',
+        'class': 'hour-label'
+      });
+      text.textContent = name;
+      fragL.appendChild(text);
+    });
+
     els.ticks.appendChild(fragT);
     els.labels.appendChild(fragL);
-    els.arcDay.setAttribute('d', arcPath(R_TICK_IN + 15, -90 + 0 - 0, 90));  // sunrise..sunset (upper half)
-    els.arcNight.setAttribute('d', arcPath(R_TICK_IN + 15, 90, 270));        // sunset..sunrise (lower half)
+    drawArcs();
+  }
+
+  function drawArcs() {
+    var day = HA.computeDay(new Date(), parseFloat(els.lat.value), parseFloat(els.lon.value));
+    var bounds = (day && !isNaN(day.sunrise.getTime()) && !isNaN(day.sunset.getTime()))
+      ? HA.arcBounds(day, mode) : { day: { from: 270, to: 90 }, night: { from: 90, to: 270 } };
+    els.arcDay.setAttribute('d', arcPath(R_ARC, bounds.day.from, bounds.day.to));
+    els.arcNight.setAttribute('d', arcPath(R_ARC, bounds.night.from, bounds.night.to));
   }
 
   function getLocation() {
@@ -117,26 +171,28 @@
     clearError();
 
     var day = HA.computeDay(new Date(), loc.lat, loc.lon);
-    if (isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime())) {
+    if (isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime()) || isNaN(day.solarNoon.getTime())) {
       showError('The sun keeps no hours here — perhaps this latitude lies beyond his realm.');
       return;
     }
 
-    var state = HA.hourState(new Date(), day);
+    var state = HA.hourState(new Date(), day, mode);
     if (!state) {
       showError('The hour cannot be read — the sun is on the other side of the world.');
       return;
     }
 
-    var rot = angleToRotation(state.angle);
-    els.pointer.setAttribute('transform', 'rotate(' + rot + ' ' + CX + ' ' + CY + ')');
-    els.quadrantName.textContent = state.quadrant;
+    els.pointer.setAttribute('transform', 'rotate(' + dialToRotation(state.dialAngle) + ' ' + CX + ' ' + CY + ')');
+    els.quadrantName.textContent = state.quadrant +
+      (mode === 'clock24' ? ' · daylight ' + Math.round(HA.dayFraction(day) * 24) + ' h' : '');
     els.nowName.textContent = state.current.name;
     els.nowNote.textContent = state.current.note ? ' — ' + state.current.note : '';
     els.nowRemaining.textContent = 'The ' + state.next.name + ' sounds in ' +
       HA.fmtDuration(state.msUntilNext) + '.';
 
-    var rows = HA.canonicalHours(day).sort(function (a, b) { return a.angle - b.angle; });
+    var rows = HA.canonicalHours(day).sort(function (a, b) {
+      return (mode === 'clock24' ? a.clockAngle - b.clockAngle : a.angle - b.angle);
+    });
     els.tableBody.innerHTML = '';
     rows.forEach(function (h) {
       var tr = document.createElement('tr');
@@ -162,9 +218,17 @@
     }
   }
 
-  function init() {
+  function setMode(newMode) {
+    if (newMode === mode) return;
+    mode = newMode;
+    localStorage.setItem('horae.mode', mode);
+    els.modeTemporal.classList.toggle('active', mode === 'temporal');
+    els.modeClock24.classList.toggle('active', mode === 'clock24');
     buildStatic();
+    render();
+  }
 
+  function init() {
     var savedLat = parseFloat(localStorage.getItem('horae.lat'));
     var savedLon = parseFloat(localStorage.getItem('horae.lon'));
     if (!isNaN(savedLat) && !isNaN(savedLon)) {
@@ -173,9 +237,19 @@
       els.lat.value = 32.716; els.lon.value = -117.161;
     }
 
+    var savedMode = localStorage.getItem('horae.mode');
+    if (savedMode === 'clock24' || savedMode === 'temporal') mode = savedMode;
+    els.modeTemporal.classList.toggle('active', mode === 'temporal');
+    els.modeClock24.classList.toggle('active', mode === 'clock24');
+
+    buildStatic();
+
     [els.lat, els.lon].forEach(function (el) {
-      el.addEventListener('change', function () { saveLoc(); render(); });
+      el.addEventListener('change', function () { saveLoc(); if (mode === 'clock24') { buildStatic(); } render(); });
     });
+
+    els.modeTemporal.addEventListener('click', function () { setMode('temporal'); });
+    els.modeClock24.addEventListener('click', function () { setMode('clock24'); });
 
     els.geo.addEventListener('click', function () {
       if (!navigator.geolocation) {
@@ -187,6 +261,7 @@
         els.lon.value = pos.coords.longitude.toFixed(3);
         saveLoc();
         clearError();
+        if (mode === 'clock24') buildStatic();
         render();
       }, function () {
         showError('The place could not be found — enter the latitude and longitude by hand.');
