@@ -35,6 +35,7 @@
     live: document.getElementById('live'),
     timeSlider: document.getElementById('time-slider'),
     timeLabel: document.getElementById('time-label'),
+    place: document.getElementById('place'),
     yearRing: document.getElementById('year-ring'),
     yearMarker: document.getElementById('year-marker'),
     festival: document.getElementById('festival')
@@ -496,14 +497,16 @@
       playing = true;
       els.play.textContent = '❚❚ Pause the year';
       playTimer = setInterval(function () {
-        var idx = dayOfYearIndex(viewDate) + 1;
-        if (idx > 364) { stopPlaying(); return; }
-        viewDate = dateFromDayIndex(viewDate.getFullYear(), idx);
-        // the hours scrub by degrees too: the hand sweeps while the year turns
-        timeScrubMin = (timeScrubMin == null ? new Date().getHours() * 60 + new Date().getMinutes() : timeScrubMin) + 47;
-        timeScrubMin = timeScrubMin % 1440;
+        // the hour cycle completes before the day turns
+        timeScrubMin = (timeScrubMin == null ? new Date().getHours() * 60 + new Date().getMinutes() : timeScrubMin) + 30;
+        if (timeScrubMin >= 1440) {
+          timeScrubMin = timeScrubMin - 1440;
+          var idx = dayOfYearIndex(viewDate) + 1;
+          if (idx > 364) { stopPlaying(); return; }
+          viewDate = dateFromDayIndex(viewDate.getFullYear(), idx);
+        }
         refresh();
-      }, 90);
+      }, 50);
     });
 
     function stopPlaying() {
@@ -514,19 +517,33 @@
 
     els.geo.addEventListener('click', function () {
       if (!navigator.geolocation) {
-        showError('This device knows not where it stands — enter the latitude and longitude by hand.');
+        showError('This device knows not where it stands — pick a known place from the list, or enter the latitude and longitude by hand.');
         return;
       }
+      els.geo.disabled = true;
+      els.geo.textContent = '☉ Asking the heavens…';
       navigator.geolocation.getCurrentPosition(function (pos) {
+        els.geo.disabled = false;
+        els.geo.textContent = '☉ Use my place';
         els.lat.value = pos.coords.latitude.toFixed(3);
         els.lon.value = pos.coords.longitude.toFixed(3);
         saveLoc();
         clearError();
-        if (mode === 'clock24') buildStatic();
-        render();
+        refresh();
       }, function () {
-        showError('The place could not be found — enter the latitude and longitude by hand.');
+        els.geo.disabled = false;
+        els.geo.textContent = '☉ Use my place';
+        showError('The device’s place was refused or could not be found — pick a known place from the list above, or enter the latitude and longitude by hand.');
       });
+    });
+
+    els.place.addEventListener('change', function () {
+      var parts = els.place.value.split(',');
+      els.lat.value = parseFloat(parts[0]).toFixed(3);
+      els.lon.value = parseFloat(parts[1]).toFixed(3);
+      saveLoc();
+      clearError();
+      refresh();
     });
 
     render();

@@ -22,6 +22,27 @@
 
   <section class="rubrics">
     <label class="rubric">
+      <span>A known place</span>
+      <select id="place">
+        <option value="32.716,-117.161">San Diego</option>
+        <option value="37.7749,-122.4194">San Francisco</option>
+        <option value="40.7128,-74.0060">New York</option>
+        <option value="21.3069,-157.8583">Honolulu (no daylight-saving)</option>
+        <option value="51.5074,-0.1278">London</option>
+        <option value="48.8566,2.3522">Paris</option>
+        <option value="30.0444,31.2357">Cairo</option>
+        <option value="-1.2921,36.8219">Nairobi (on the equator)</option>
+        <option value="19.0760,72.8777">Mumbai (half-hour time)</option>
+        <option value="1.3521,103.8198">Singapore (on the equator)</option>
+        <option value="35.6762,139.6503">Tokyo</option>
+        <option value="-33.8688,151.2093">Sydney (southern summer)</option>
+        <option value="-36.8485,174.7633">Auckland (southern daylight-saving)</option>
+        <option value="64.1466,-21.9426">Reykjavík (the midnight sun)</option>
+        <option value="-53.1638,-70.9171">Punta Arenas (the far south)</option>
+      </select>
+    </label>
+    <button id="geo" type="button" class="button">☉ Use my place</button>
+    <label class="rubric">
       <span>Latitude</span>
       <input id="lat" type="number" step="0.001" min="-89.999" max="89.999" placeholder="32.716">
     </label>
@@ -29,7 +50,6 @@
       <span>Longitude</span>
       <input id="lon" type="number" step="0.001" min="-180" max="180" placeholder="-117.161">
     </label>
-    <button id="geo" type="button" class="button">☉ Use my place</button>
     <div class="mode-toggle" role="group" aria-label="Dial mode">
       <button id="mode-temporal" type="button" class="button mode active">Liturgical basis</button>
       <button id="mode-clock24" type="button" class="button mode">Stopwatch basis</button>
