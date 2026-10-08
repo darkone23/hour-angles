@@ -31,8 +31,8 @@
     </label>
     <button id="geo" type="button" class="button">☉ Use my place</button>
     <div class="mode-toggle" role="group" aria-label="Dial mode">
-      <button id="mode-temporal" type="button" class="button mode active">Temporal hours</button>
-      <button id="mode-clock24" type="button" class="button mode">24-hour clock</button>
+      <button id="mode-temporal" type="button" class="button mode active">Liturgical basis</button>
+      <button id="mode-clock24" type="button" class="button mode">Stopwatch basis</button>
     </div>
     <p id="error" class="error" hidden></p>
   </section>
@@ -87,10 +87,7 @@
       <circle cx="240" cy="240" r="6" fill="#e0a93e"/>
     </svg>
     <p id="quadrant-name" class="quadrant-name"></p>
-    <p id="legend" class="legend" hidden>Shown against the equal hours of the clock:
-      the <span class="legend-gold">gilt hours</span> of light and the
-      <span class="legend-blue">blue hours</span> of night are the liturgical
-      twelve — they stretch and shrink with the sun.</p>
+    <p id="legend" class="legend"></p>
   </section>
 
   <section class="reading">

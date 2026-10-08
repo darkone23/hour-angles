@@ -54,9 +54,33 @@
 
   var CANONICAL = { 'Lauds': 1, 'Prime': 1, 'Terce': 1, 'Sext': 1, 'None': 1, 'Vespers': 1, 'Compline': 1, 'Matins': 1 };
   var ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-  var QUARTER_ROMAN = ['I', 'II', 'III', 'IV', 'V']; // minor ticks within a quadrant
 
   /* All tick/label geometry depends on the mode, so rebuild on toggle. */
+  function numeral(fragL, dialAng, label, fill, size) {
+    var np = polar(R_NUMERAL, dialAng);
+    var el = svgEl('text', {
+      x: np[0], y: np[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      'font-family': 'Cinzel, serif', 'font-size': size, fill: fill
+    });
+    el.textContent = label;
+    fragL.appendChild(el);
+  }
+
+  /* Numbered liturgical hours along an arc: gilt for the day's twelve,
+   * blue for the night's twelve. */
+  function liturgicalNumerals(fragL, arc, fill) {
+    for (var k = 1; k < 12; k++) {
+      var ang = arc.from + (k / 12) * arc.span;
+      var gp = polar(R_LITURGICAL, ang);
+      var lit = svgEl('text', {
+        x: gp[0], y: gp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Cinzel, serif', 'font-size': 12, fill: fill
+      });
+      lit.textContent = ROMAN[k % 12];
+      fragL.appendChild(lit);
+    }
+  }
+
   function buildStatic() {
     els.ticks.innerHTML = '';
     els.labels.innerHTML = '';
@@ -77,84 +101,66 @@
     var fragT = document.createDocumentFragment();
     var fragL = document.createDocumentFragment();
 
-    if (mode === 'clock24') {
-      var loc = getLocation();
-      var day = HA.computeDay(new Date(), loc.lat, loc.lon);
-      var bounds = (day && !isNaN(day.solarNoon.getTime())) ? HA.arcBounds(day, mode) : null;
-      var swTicks = bounds ? HA.stopwatchTicks(day, mode) : [];
-
-      // chronological basis: a thin clock tick each quarter-hour, numerals I–XII
-      for (var a = 0; a < 360; a += 15) {
-        var major = a % 90 === 0;
-        var p1 = polar(R_TICK_IN, a), p2 = polar(major ? R_MAJOR_OUT : R_TICK_OUT, a);
-        fragT.appendChild(svgEl('line', {
-          x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
-          stroke: major ? '#5b3a1e' : '#8a6a35',
-          'stroke-width': major ? 2.2 : 1,
-          'stroke-dasharray': major ? '' : '3 3'
-        }));
-        if (a % 30 === 0) {
-          var np = polar(R_NUMERAL, a);
-          var numeral = svgEl('text', {
-            x: np[0], y: np[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-            'font-family': 'Cinzel, serif', 'font-size': 13, fill: '#8a6a35'
-          });
-          numeral.textContent = ROMAN[a / 30];
-          fragL.appendChild(numeral);
-        }
-      }
-
-      // stopwatch hours stretched along the arcs (gold, dotted)
-      swTicks.forEach(function (d) {
-        var s1 = polar(R_STOPWATCH_IN, d), s2 = polar(R_STOPWATCH_OUT, d);
-        fragT.appendChild(svgEl('line', {
-          x1: s1[0], y1: s1[1], x2: s2[0], y2: s2[1],
-          stroke: '#b8860b', 'stroke-width': 2, 'stroke-dasharray': '2 4'
-        }));
-      });
-
-      // the comparison itself: the liturgical hours I–XII numbered along the
-      // stretched day arc and night arc (gold), against the fixed clock
-      // numerals (ink) — one scale stretches, the other does not
-      if (bounds) {
-        for (var q = 0; q < 2; q++) {
-          var arc = q === 0 ? bounds.day : bounds.night;
-          for (var k = 1; k < 12; k++) {
-            var ang = arc.from + (k / 12) * arc.span;
-            var gp = polar(R_LITURGICAL, ang);
-            var lit = svgEl('text', {
-              x: gp[0], y: gp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-              'font-family': 'Cinzel, serif', 'font-size': 12, fill: q === 0 ? '#a07310' : '#5d7db0'
-            });
-            lit.textContent = ROMAN[k % 12];
-            fragL.appendChild(lit);
-          }
-        }
-      }
-    } else {
-      // temporal dial: six unequal hours per quadrant
-      for (var a2 = 0; a2 < 360; a2 += 15) {
-        var major2 = a2 % 45 === 0;
-        var q1 = polar(R_TICK_IN, a2), q2 = polar(major2 ? R_MAJOR_OUT : R_TICK_OUT, a2);
-        fragT.appendChild(svgEl('line', {
-          x1: q1[0], y1: q1[1], x2: q2[0], y2: q2[1],
-          stroke: major2 ? '#5b3a1e' : '#8a6a35',
-          'stroke-width': major2 ? 2.2 : 1,
-          'stroke-dasharray': major2 ? '' : '3 3'
-        }));
-        if (a2 % 30 !== 0 && !canonicalAngles[a2]) {
-          var qp = polar(R_NUMERAL, a2);
-          var qn = svgEl('text', {
-            x: qp[0], y: qp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-            'font-family': 'Cinzel, serif', 'font-size': 11, fill: '#8a6a35'
-          });
-          qn.textContent = QUARTER_ROMAN[(a2 / 15) % 6 - 1];
-          fragL.appendChild(qn);
-        }
-      }
+    // minor ticks in both modes
+    for (var a = 0; a < 360; a += 15) {
+      var major = a % 90 === 0;
+      var p1 = polar(R_TICK_IN, a), p2 = polar(major ? R_MAJOR_OUT : R_TICK_OUT, a);
+      fragT.appendChild(svgEl('line', {
+        x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
+        stroke: major ? '#5b3a1e' : '#8a6a35',
+        'stroke-width': major ? 2.2 : 1,
+        'stroke-dasharray': major ? '' : '3 3'
+      }));
     }
 
-    // canonical hour names, upright, just inside the outer ring, on both modes
+    var loc = getLocation();
+    var day = HA.computeDay(new Date(), loc.lat, loc.lon);
+    var valid = day && !isNaN(day.solarNoon.getTime()) && !isNaN(day.sunrise.getTime());
+    var bounds = valid ? HA.arcBounds(day, mode) : null;
+
+    if (mode === 'clock24') {
+      /* Stopwatch basis: the equal hours of the clock are the fixed scale.
+       * 15° of dial = one clock hour, so 6am/6pm sit on the horizontal axis.
+       * Lauds/Vespers and the gilt liturgical twelve anchor to true dawn/dusk,
+       * so the sunlight area grows or shrinks with the day. */
+      for (var c = 0; c < 360; c += 15) {
+        numeral(fragL, c, ROMAN[(c / 15) % 12], '#5b3a1e', 10);
+      }
+      if (bounds) {
+        HA.stopwatchTicks(day, mode).forEach(function (d) {
+          var s1 = polar(R_STOPWATCH_IN, d), s2 = polar(R_STOPWATCH_OUT, d);
+          fragT.appendChild(svgEl('line', {
+            x1: s1[0], y1: s1[1], x2: s2[0], y2: s2[1],
+            stroke: '#b8860b', 'stroke-width': 2, 'stroke-dasharray': '2 4'
+          }));
+        });
+        liturgicalNumerals(fragL, bounds.day, '#a07310');
+        liturgicalNumerals(fragL, bounds.night, '#5d7db0');
+      }
+      els.legend.innerHTML = 'Stopwatch basis — the <span class="legend-ink">equal hours of the clock</span> stand fast ' +
+        '(6 and 6 on the horizontal); the <span class="legend-gold">gilt liturgical hours</span> anchor to ' +
+        'true dawn and dusk, so the sunlight area shrinks and grows.';
+    } else {
+      /* Liturgical basis: the gilt twelve stand fast (six per quadrant,
+       * Lauds at 9 o'clock, Sext at the top, Vespers at 3 o'clock) and the
+       * ink clock hours stretch around them, sliding with the season. */
+      var fixedBounds = HA.arcBounds(day, 'temporal');
+      liturgicalNumerals(fragL, fixedBounds.day, '#a07310');
+      liturgicalNumerals(fragL, fixedBounds.night, '#5d7db0');
+      if (valid) {
+        for (var h = 0; h < 24; h++) {
+          var t = new Date();
+          t.setHours(h, 0, 0, 0);
+          var dial = HA.dialAngleFor(t.getTime(), day, 'temporal');
+          if (dial != null) numeral(fragL, dial, ROMAN[h % 12], '#8a6a35', 10);
+        }
+      }
+      els.legend.innerHTML = 'Liturgical basis — the <span class="legend-gold">gilt liturgical hours</span> stand fast ' +
+        '(Lauds at dawn\'s place, Sext at the top, Vespers at dusk\'s); the ' +
+        '<span class="legend-ink">ink clock hours</span> stretch and slide with the sun.';
+    }
+
+    // canonical hour names, upright, just inside the outer ring, both modes
     Object.keys(canonicalAngles).forEach(function (k) {
       var ang = parseFloat(k), name = canonicalAngles[k];
       var lp = polar(R_LABEL, ang);
@@ -172,7 +178,6 @@
 
     els.ticks.appendChild(fragT);
     els.labels.appendChild(fragL);
-    els.legend.hidden = mode !== 'clock24';
     drawArcs();
   }
 
