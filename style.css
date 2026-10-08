@@ -186,6 +186,14 @@ body {
   white-space: nowrap;
 }
 
+.festival {
+  text-align: center;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--rubric);
+  margin: 0.35rem 0 0;
+}
+
 .reading { margin-top: 1.6rem; }
 
 .now-hour {

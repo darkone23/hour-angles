@@ -6,6 +6,8 @@
   var CX = 240, CY = 240, R_TICK_IN = 180, R_TICK_OUT = 168, R_MAJOR_OUT = 158;
   var R_NUMERAL = 140, R_LABEL = 198, R_ARC = 200, R_STOPWATCH_IN = 156, R_STOPWATCH_OUT = 170;
   var R_LITURGICAL = 116;
+  var R_YEAR = 100, R_YEAR_W = 9, R_FESTIVAL = 76;
+  var R_TRAIL_IN = 188, R_TRAIL_OUT = 212;
 
   var els = {
     lat: document.getElementById('lat'),
@@ -29,7 +31,10 @@
     today: document.getElementById('today'),
     play: document.getElementById('play'),
     yearSlider: document.getElementById('year-slider'),
-    yearLabel: document.getElementById('year-label')
+    yearLabel: document.getElementById('year-label'),
+    yearRing: document.getElementById('year-ring'),
+    yearMarker: document.getElementById('year-marker'),
+    festival: document.getElementById('festival')
   };
 
   var mode = 'temporal';
@@ -94,6 +99,78 @@
     }
   }
 
+  /* ---- The year ring: the wheel of the year ------------------------------
+   * An inner annulus where each of the eight festivals sits at its
+   * calendar angle, carrying that day's true daylight arc drawn on a
+   * fixed mini 24-hour dial (noon at top) — so the DST jump shows as a
+   * discontinuity and the seasons breathe even on the liturgical basis.
+   */
+  function dayOfYearFraction(d) {
+    var start = new Date(d.getFullYear(), 0, 1);
+    return (new Date(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 86400000 / 365;
+  }
+
+  function miniAngle(t) {
+    var noon = HA.wallNoon(t).getTime();
+    var off = (t - noon) % 86400000;
+    if (off < 0) off += 86400000;
+    return off / 86400000 * 360;
+  }
+
+  function buildYearRing(fragT, fragL) {
+    var year = viewDate.getFullYear();
+    var wheel = HA.festivalWheel();
+    var nearest = null;
+
+    wheel.forEach(function (f) {
+      var fdate = HA.festivalDate(f, year);
+      var calAng = dayOfYearFraction(fdate) * 360;
+      var spoke = polar(R_YEAR - R_YEAR_W / 2, calAng), spoke2 = polar(R_YEAR + R_YEAR_W / 2 + 5, calAng);
+      fragT.appendChild(svgEl('line', {
+        x1: spoke[0], y1: spoke[1], x2: spoke2[0], y2: spoke2[1],
+        stroke: '#a4834a', 'stroke-width': 1
+      }));
+      var lp = polar(R_FESTIVAL, calAng);
+      var label = svgEl('text', {
+        x: lp[0], y: lp[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Cinzel, serif', 'font-size': 9,
+        fill: '#6b4a1e', 'class': 'festival-label', 'data-name': f.name
+      });
+      label.textContent = f.name;
+      fragL.appendChild(label);
+
+      var day = HA.computeDay(fdate, parseFloat(els.lat.value), parseFloat(els.lon.value));
+      if (isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime())) return;
+      var from = miniAngle(day.sunrise.getTime());
+      var to = miniAngle(day.sunset.getTime());
+      fragT.appendChild(svgEl('path', {
+        d: arcPath(R_YEAR, from, to),
+        fill: 'none', stroke: '#e8c96f', 'stroke-width': R_YEAR_W,
+        'stroke-opacity': 0.55, 'stroke-linecap': 'round'
+      }));
+    });
+  }
+
+  function buildTrail(fragT) {
+    /* the ghost trail: sunrise/sunset marks for the eight festival days,
+     * drawn where the current basis places them */
+    var year = viewDate.getFullYear();
+    HA.festivalWheel().forEach(function (f) {
+      var fdate = HA.festivalDate(f, year);
+      var day = HA.computeDay(fdate, parseFloat(els.lat.value), parseFloat(els.lon.value));
+      if (isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime())) return;
+      var bounds = HA.arcBounds(day, mode);
+      if (!bounds) return;
+      [bounds.day.from, bounds.day.to].forEach(function (ang) {
+        var t1 = polar(R_TRAIL_IN, ang), t2 = polar(R_TRAIL_OUT, ang);
+        fragT.appendChild(svgEl('line', {
+          x1: t1[0], y1: t1[1], x2: t2[0], y2: t2[1],
+          stroke: '#b8860b', 'stroke-width': 1.6, 'stroke-dasharray': '3 3', 'stroke-opacity': 0.8
+        }));
+      });
+    });
+  }
+
   function buildStatic() {
     els.ticks.innerHTML = '';
     els.labels.innerHTML = '';
@@ -152,6 +229,7 @@
         liturgicalNumerals(fragL, bounds.day, '#a07310');
         liturgicalNumerals(fragL, bounds.night, '#5d7db0');
       }
+      buildTrail(fragT);
       els.legend.innerHTML = 'Stopwatch basis — the <span class="legend-ink">equal hours of the clock</span> stand fast ' +
         '(6 and 6 on the horizontal); the <span class="legend-gold">gilt liturgical hours</span> anchor to ' +
         'true dawn and dusk, so the sunlight area shrinks and grows.';
@@ -164,7 +242,7 @@
       liturgicalNumerals(fragL, fixedBounds.night, '#5d7db0');
       if (valid) {
         for (var h = 0; h < 24; h++) {
-          var t = new Date();
+          var t = new Date(viewDate.getTime());
           t.setHours(h, 0, 0, 0);
           var dial = HA.dialAngleFor(t.getTime(), day, 'temporal');
           if (dial != null) numeral(fragL, dial, clockDigit(h), '#8a6a35', 10);
@@ -172,8 +250,11 @@
       }
       els.legend.innerHTML = 'Liturgical basis — the <span class="legend-gold">gilt liturgical hours</span> stand fast ' +
         '(Lauds at dawn\'s place, Sext at the top, Vespers at dusk\'s); the ' +
-        '<span class="legend-ink">ink clock hours</span> stretch and slide with the sun.';
+        '<span class="legend-ink">ink clock hours</span> stretch and slide with the sun, ' +
+        'and the inner wheel carries each festival\'s true daylight.';
     }
+
+    buildYearRing(fragT, fragL);
 
     // canonical hour names, upright, just inside the outer ring, both modes
     Object.keys(canonicalAngles).forEach(function (k) {
@@ -194,6 +275,25 @@
     els.ticks.appendChild(fragT);
     els.labels.appendChild(fragL);
     drawArcs();
+  }
+
+  function updateYearRing() {
+    var ang = dayOfYearFraction(viewDate) * 360;
+    var p = polar(R_YEAR, ang);
+    els.yearMarker.setAttribute('cx', p[0]);
+    els.yearMarker.setAttribute('cy', p[1]);
+    els.yearMarker.setAttribute('visibility', 'visible');
+    var fest = HA.nextFestival(viewNow());
+    if (fest) {
+      var plural = fest.daysUntil === 1 ? 'day' : 'days';
+      els.festival.textContent = fest.name + ' kindles in ' + fest.daysUntil + ' ' + plural +
+        ' — ' + fest.note + '.';
+    }
+    var labels = els.labels.querySelectorAll('.festival-label');
+    labels.forEach(function (l) {
+      l.setAttribute('fill', l.getAttribute('data-name') === (fest && fest.name) ? '#9e2b25' : '#6b4a1e');
+      l.setAttribute('font-weight', l.getAttribute('data-name') === (fest && fest.name) ? 'bold' : 'normal');
+    });
   }
 
   /* The effective "now": the chosen day, at the current wall-clock time. */
@@ -304,6 +404,8 @@
       tr.appendChild(tdN); tr.appendChild(tdNote); tr.appendChild(tdT);
       els.tableBody.appendChild(tr);
     });
+
+    updateYearRing();
   }
 
   function saveLoc() {

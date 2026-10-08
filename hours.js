@@ -72,11 +72,12 @@
   }
 
   /* ---- 24-hour clock mode -------------------------------------------------
-   * Solar noon is pinned to the top of the dial (0°, clockwise). The daylight
-   * arc stretches/shrinks symmetrically around it with the true day length:
-   * a 12-hour day fills exactly the top half (as in temporal mode), a longer
-   * day stretches past 9 and 3 o'clock, a shorter day shrinks inside them.
-   * dial angle convention everywhere: 0° = top (solar noon), clockwise.
+   * Stopwatch basis: the dial is the VIEWER'S WALL CLOCK. 12:00 local sits
+   * at the top, 18:00 on the right, 24:00 at the bottom, 6:00 on the left.
+   * Because the anchor is the wall clock and not the sun, the daylight arc
+   * breathes with the seasons AND jumps 15 degrees at every daylight-saving
+   * transition — sunrise really does jump relative to the stopwatch.
+   * dial angle convention everywhere: 0° = top (wall noon), clockwise.
    */
   function mod360(d) { return ((d % 360) + 360) % 360; }
 
@@ -84,9 +85,16 @@
     return (day.sunset.getTime() - day.sunrise.getTime()) / 86400000;
   }
 
+  /* Noon (12:00 local) of the calendar day containing `t`. */
+  function wallNoon(t) {
+    var d = new Date(t);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  }
+
   function clockAngleFor(now, day) {
-    if (isNaN(day.solarNoon.getTime())) return null;
-    var off = (now - day.solarNoon.getTime()) % 86400000;
+    var noon = wallNoon(now).getTime();
+    var off = (now - noon) % 86400000;
     if (off < 0) off += 86400000;
     return off / 86400000 * 360;
   }
@@ -174,15 +182,15 @@
     };
   }
 
-  /* 24-hour mode: offices ordered by their real offset from solar noon. */
+  /* 24-hour mode: offices ordered by their real offset from wall noon. */
   function hourStateClock24(now, day) {
     if (isNaN(day.solarNoon.getTime()) || isNaN(day.sunrise.getTime()) || isNaN(day.sunset.getTime())) return null;
-    var noon = day.solarNoon.getTime();
+    var noon = wallNoon(now).getTime();
     var nowOff = (now - noon) % 86400000;
     if (nowOff < 0) nowOff += 86400000;
 
     var hours = canonicalHours(day).map(function (h) {
-      var off = (h.at.getTime() - noon) % 86400000;
+      var off = (h.at.getTime() - wallNoon(h.at.getTime()).getTime()) % 86400000;
       if (off < 0) off += 86400000;
       return { hour: h, off: off };
     }).sort(function (a, b) { return a.off - b.off; });
@@ -195,8 +203,8 @@
     if (!cur) cur = hours[hours.length - 1];   // wrap: latest office "yesterday"
     if (!nxt) nxt = hours[0];                  // wrap: earliest office "tomorrow"
 
-    var sunriseOff = (day.sunrise.getTime() - noon) % 86400000;
-    var sunsetOff = (day.sunset.getTime() - noon) % 86400000;
+    var sunriseOff = (day.sunrise.getTime() - wallNoon(day.sunrise.getTime()).getTime()) % 86400000;
+    var sunsetOff = (day.sunset.getTime() - wallNoon(day.sunset.getTime()).getTime()) % 86400000;
     if (sunriseOff < 0) sunriseOff += 86400000;
     if (sunsetOff < 0) sunsetOff += 86400000;
     // the day band may wrap midnight in offset space (short nights aside,
@@ -236,6 +244,45 @@
     return ticks;
   }
 
+  /* ---- The wheel of the year --------------------------------------------
+   * The eight festivals at fixed conventional dates, ordered from Yule.
+   * Each is a sample day for the year ring and the ghost trail.
+   */
+  function festivalWheel() {
+    return [
+      { name: 'Yule', month: 11, day: 21, note: 'the winter solstice' },
+      { name: 'Imbolc', month: 1, day: 1, note: 'the quickening of spring' },
+      { name: 'Ostara', month: 2, day: 20, note: 'the spring equinox' },
+      { name: 'Beltane', month: 4, day: 1, note: 'the fires of summer' },
+      { name: 'Litha', month: 5, day: 21, note: 'the summer solstice' },
+      { name: 'Lughnasadh', month: 7, day: 1, note: 'the first harvest' },
+      { name: 'Mabon', month: 8, day: 22, note: 'the autumn equinox' },
+      { name: 'Samhain', month: 10, day: 1, note: 'the new year of darkness' }
+    ];
+  }
+
+  function festivalDate(f, year) {
+    return new Date(year, f.month, f.day, 12, 0, 0, 0);
+  }
+
+  /* Nearest upcoming festival, wrapping into the next year. */
+  function nextFestival(date) {
+    var year = date.getFullYear();
+    var best = null;
+    for (var y = 0; y < 2; y++) {
+      var wheel = festivalWheel();
+      for (var i = 0; i < wheel.length; i++) {
+        var d = festivalDate(wheel[i], year + y);
+        var diff = d.getTime() - date.getTime();
+        if (diff >= 0 && (!best || diff < best.diff)) {
+          best = { name: wheel[i].name, note: wheel[i].note, date: d, diff: diff };
+        }
+      }
+    }
+    if (best) best.daysUntil = Math.ceil(best.diff / 86400000);
+    return best;
+  }
+
   function fmtClock(d) {
     if (!d || isNaN(d.getTime())) return '—';
     return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -257,10 +304,14 @@
     angleFor: angleFor,
     quadrantFor: quadrantFor,
     clockAngleFor: clockAngleFor,
+    wallNoon: wallNoon,
     dialAngleFor: dialAngleFor,
     dayFraction: dayFraction,
     arcBounds: arcBounds,
     stopwatchTicks: stopwatchTicks,
+    festivalWheel: festivalWheel,
+    festivalDate: festivalDate,
+    nextFestival: nextFestival,
     canonicalHours: canonicalHours,
     timeAtAngle: timeAtAngle,
     hourState: hourState,

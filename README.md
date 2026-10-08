@@ -12,7 +12,16 @@ vanilla-JS clock (SunCalc and fonts come from CDN):
   for device geolocation
 - a **day picker and year scrubber** — choose any day, or press play and
   watch the sunlit half of the dial breathe through the whole year,
-  lengthening and shortening with the seasons
+  with a daylight-hours readout
+- a **year ring** at the heart of the dial — the wheel of the year:
+  Samhain, Yule, Imbolc, Ostara, Beltane, Litha, Lughnasadh and Mabon
+  each at their calendar angle, carrying the true daylight of their
+  day on a fixed equal-hours mini-dial (daylight-saving jumps included)
+- a **ghost trail** of sunrise and sunset positions for the eight
+  festival days, drawn where the current basis places them
+- on the liturgical basis the ink clock digits are placed at the
+  chosen day's wall-clock hours mapped through the temporal dial —
+  they slide with the seasons and jump at daylight-saving transitions
 - the gilded sun pointer marks the present hour angle (0° = sunrise,
   90° = noon, 180° = sunset, 270° = nadir)
 - canonical hours are marked on the dial: **Lauds** (dawn), **Prime**,
