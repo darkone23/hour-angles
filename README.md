@@ -17,11 +17,14 @@ vanilla-JS clock (SunCalc and fonts come from CDN):
 - canonical hours are marked on the dial: **Lauds** (dawn), **Prime**,
   **Terce**, **Sext** (noon), **None**, **Vespers** (dusk), **Compline**,
   **Matins** (the night office)
-- two dial modes: **Temporal hours** (each quarter of the day holds 90° of
-  dial, six unequal hours per quarter) and **24-hour clock** (solar noon
-  pinned to the top; the daylight arc stretches or shrinks with the true
-  day length — a 12-hour day fills exactly the top half, a 16-hour day
-  fills 240°, the night taking the rest). Labels are always set upright.
+- two dial modes: **Temporal hours** (the stopwatch basis — each quarter of
+  the day holds 90° of dial, six unequal hours per quarter) and **24-hour
+  clock** (the chronological basis — clock-hour numerals I–XII with noon at
+  the top and 6am/6pm on the horizontal line; the gold daylight arc
+  stretches or shrinks with the true day length, so on a 60% day Lauds and
+  Vespers sit below the horizontal and on a 40% day above it, while the
+  stopwatch hours spread across the arcs with inverse spacing). Labels are
+  always set upright.
 
 Live at: <https://darkone23.github.io/hour-angles/>
 

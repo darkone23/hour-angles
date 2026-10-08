@@ -4,7 +4,7 @@
 
   var HA = window.HourAngles;
   var CX = 240, CY = 240, R_TICK_IN = 180, R_TICK_OUT = 168, R_MAJOR_OUT = 158;
-  var R_NUMERAL = 148, R_LABEL = 198, R_ARC = 195;
+  var R_NUMERAL = 140, R_LABEL = 198, R_ARC = 200, R_STOPWATCH_IN = 156, R_STOPWATCH_OUT = 170;
 
   var els = {
     lat: document.getElementById('lat'),
@@ -76,7 +76,11 @@
     var fragL = document.createDocumentFragment();
 
     if (mode === 'clock24') {
-      // true 24-hour dial: a tick each quarter-hour of the day, numerals I–XII
+      var loc = getLocation();
+      var day = HA.computeDay(new Date(), loc.lat, loc.lon);
+      var swTicks = (day && !isNaN(day.solarNoon.getTime())) ? HA.stopwatchTicks(day, mode) : [];
+
+      // chronological basis: a thin clock tick each quarter-hour, numerals I–XII
       for (var a = 0; a < 360; a += 15) {
         var major = a % 90 === 0;
         var p1 = polar(R_TICK_IN, a), p2 = polar(major ? R_MAJOR_OUT : R_TICK_OUT, a);
@@ -96,6 +100,15 @@
           fragL.appendChild(numeral);
         }
       }
+
+      // stopwatch hours stretched along the arcs (gold, dotted)
+      swTicks.forEach(function (d) {
+        var s1 = polar(R_STOPWATCH_IN, d), s2 = polar(R_STOPWATCH_OUT, d);
+        fragT.appendChild(svgEl('line', {
+          x1: s1[0], y1: s1[1], x2: s2[0], y2: s2[1],
+          stroke: '#b8860b', 'stroke-width': 2, 'stroke-dasharray': '2 4'
+        }));
+      });
     } else {
       // temporal dial: six unequal hours per quadrant
       for (var a2 = 0; a2 < 360; a2 += 15) {

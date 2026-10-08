@@ -216,6 +216,26 @@
     };
   }
 
+  /*
+   * Stopwatch (temporal) hour tick angles in dial degrees, for the given
+   * mode. Temporal mode needs none here (its ticks are fixed 15-degree
+   * spacing). Clock24 mode spreads the twelve daylight temporal hours
+   * across the stretched day arc and the twelve night temporal hours
+   * across the compressed night arc, so the spacing between the
+   * stopwatch hours stretches or shrinks inversely with the arc share.
+   */
+  function stopwatchTicks(day, mode) {
+    if (mode !== 'clock24') return [];
+    var b = arcBounds(day, mode);
+    if (!b) return [];
+    var ticks = [];
+    for (var k = 1; k < 12; k++) {
+      ticks.push(b.day.from + (k / 12) * b.day.span);
+      ticks.push(b.night.from + (k / 12) * b.night.span);
+    }
+    return ticks;
+  }
+
   function fmtClock(d) {
     if (!d || isNaN(d.getTime())) return '—';
     return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -240,6 +260,7 @@
     dialAngleFor: dialAngleFor,
     dayFraction: dayFraction,
     arcBounds: arcBounds,
+    stopwatchTicks: stopwatchTicks,
     canonicalHours: canonicalHours,
     timeAtAngle: timeAtAngle,
     hourState: hourState,
