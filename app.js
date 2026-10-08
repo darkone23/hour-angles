@@ -54,6 +54,11 @@
 
   var CANONICAL = { 'Lauds': 1, 'Prime': 1, 'Terce': 1, 'Sext': 1, 'None': 1, 'Vespers': 1, 'Compline': 1, 'Matins': 1 };
   var ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  /* regular digits for the equal hours of the clock: 24-hour ring,
+   * 12 (noon) at the top, 18 (6pm) right, 24 (midnight) bottom, 6 (6am) left */
+  function clockDigit(hour24) {
+    return hour24 === 0 ? '24' : String(hour24);
+  }
 
   /* All tick/label geometry depends on the mode, so rebuild on toggle. */
   function numeral(fragL, dialAng, label, fill, size) {
@@ -94,8 +99,10 @@
         });
       }
     } else {
-      // temporal dial angles = hour angle - 90 (0° = top = solar noon)
-      canonicalAngles = { 0: 'Sext', 45: 'None', 90: 'Vespers', 135: 'Compline', 180: 'Matins', 225: 'Lauds', 255: 'Prime', 315: 'Terce' };
+      // temporal dial angles = hour angle - 90 (0° = top = solar noon):
+      // Lauds 270 (left horizontal), Sext 0 (top), Vespers 90 (right
+      // horizontal), Matins 225 (bottom-left third of the night quarter)
+      canonicalAngles = { 0: 'Sext', 45: 'None', 90: 'Vespers', 135: 'Compline', 225: 'Matins', 270: 'Lauds', 285: 'Prime', 315: 'Terce' };
     }
 
     var fragT = document.createDocumentFragment();
@@ -123,8 +130,8 @@
        * 15° of dial = one clock hour, so 6am/6pm sit on the horizontal axis.
        * Lauds/Vespers and the gilt liturgical twelve anchor to true dawn/dusk,
        * so the sunlight area grows or shrinks with the day. */
-      for (var c = 0; c < 360; c += 15) {
-        numeral(fragL, c, ROMAN[(c / 15) % 12], '#5b3a1e', 10);
+      for (var c = 0; c < 360; c += 30) {
+        numeral(fragL, c, clockDigit(((c / 15) + 12) % 24), '#5b3a1e', 12);
       }
       if (bounds) {
         HA.stopwatchTicks(day, mode).forEach(function (d) {
@@ -152,7 +159,7 @@
           var t = new Date();
           t.setHours(h, 0, 0, 0);
           var dial = HA.dialAngleFor(t.getTime(), day, 'temporal');
-          if (dial != null) numeral(fragL, dial, ROMAN[h % 12], '#8a6a35', 10);
+          if (dial != null) numeral(fragL, dial, clockDigit(h), '#8a6a35', 10);
         }
       }
       els.legend.innerHTML = 'Liturgical basis — the <span class="legend-gold">gilt liturgical hours</span> stand fast ' +
